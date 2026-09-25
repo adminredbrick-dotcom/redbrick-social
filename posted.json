@@ -1,1 +1,58 @@
-{}
+{
+ "O01-rents-up-in": {
+  "posted_at": "scheduled in Metricool 2026-09-25",
+  "result": "metricool:381969697"
+ },
+ "O02-section-21-in": {
+  "posted_at": "scheduled in Metricool 2026-09-25",
+  "result": "metricool:381969716"
+ },
+ "O03-smoke-alarms-in": {
+  "posted_at": "scheduled in Metricool 2026-09-25",
+  "result": "metricool:381969732"
+ },
+ "O04-three-bed-in": {
+  "posted_at": "scheduled in Metricool 2026-09-25",
+  "result": "metricool:381969741"
+ },
+ "O05-gas-safety-in": {
+  "posted_at": "scheduled in Metricool 2026-09-25",
+  "result": "metricool:381969745"
+ },
+ "O06-eicr-in": {
+  "posted_at": "scheduled in Metricool 2026-09-25",
+  "result": "metricool:381969759"
+ },
+ "O07-hmo-licence-in": {
+  "posted_at": "scheduled in Metricool 2026-09-25",
+  "result": "metricool:381969768"
+ },
+ "O08-form-4a-in": {
+  "posted_at": "scheduled in Metricool 2026-09-25",
+  "result": "metricool:381969771"
+ },
+ "O09-deposits-in": {
+  "posted_at": "scheduled in Metricool 2026-09-25",
+  "result": "metricool:381969776"
+ },
+ "O10-selective-in": {
+  "posted_at": "scheduled in Metricool 2026-09-25",
+  "result": "metricool:381969780"
+ },
+ "O11-managed-in": {
+  "posted_at": "scheduled in Metricool 2026-09-25",
+  "result": "metricool:381969788"
+ },
+ "O12-gutters-in": {
+  "posted_at": "scheduled in Metricool 2026-09-25",
+  "result": "metricool:381969795"
+ },
+ "O13-form-3a-in": {
+  "posted_at": "scheduled in Metricool 2026-09-25",
+  "result": "metricool:381969804"
+ },
+ "O14-repairs-in": {
+  "posted_at": "scheduled in Metricool 2026-09-25",
+  "result": "metricool:381969814"
+ }
+}

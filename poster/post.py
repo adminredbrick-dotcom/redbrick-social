@@ -10,6 +10,9 @@ posted.json    {"<id>": {"posted_at": "...", "result": "<post id>"}}  written ba
   python poster/post.py --test     check tokens and permissions: uploads the test image to Facebook UNPUBLISHED and
                                    deletes it, creates an Instagram container WITHOUT publishing it
   python poster/post.py --selftest check the scheduling logic, no network
+  python poster/post.py --schedule-facebook
+                                   hand every future Facebook row to Facebook's own scheduler now (shows in Meta
+                                   Business Suite); rows Facebook refuses stay for the timer to post on the day
 """
 import datetime as dt
 import json
@@ -41,13 +44,27 @@ def call(method, path, **params):
         raise RuntimeError('%s (code %s/%s)' % (err.get('message'), err.get('code'), err.get('error_subcode'))) from None
 
 
+def when(p):
+    return dt.datetime.strptime(p['at'], '%Y-%m-%d %H:%M').replace(tzinfo=LONDON)
+
+
 def due(schedule, posted, now):
-    out = []
+    return [p for p in schedule if p['id'] not in posted and when(p) <= now < when(p) + LATE]
+
+
+def schedule_facebook(schedule, posted, env, now):
     for p in schedule:
-        at = dt.datetime.strptime(p['at'], '%Y-%m-%d %H:%M').replace(tzinfo=LONDON)
-        if p['id'] not in posted and at <= now < at + LATE:
-            out.append(p)
-    return out
+        if p['network'] != 'facebook' or p['id'] in posted or when(p) < now + dt.timedelta(minutes=20):
+            continue
+        try:
+            r = call('POST', env['FB_PAGE_ID'] + '/photos', url=RAW + p['image'], caption=p['caption'], published='false',
+                     scheduled_publish_time=str(int(when(p).timestamp())), unpublished_content_type='SCHEDULED',
+                     access_token=env['FB_PAGE_TOKEN'])
+            posted[p['id']] = {'posted_at': 'scheduled on Facebook ' + now.isoformat(timespec='minutes'),
+                               'result': 'fb-scheduled:' + (r.get('post_id') or r['id'])}
+            print('scheduled on Facebook', p['id'], p['at'])
+        except Exception as e:
+            print('left for the timer', p['id'], p['at'], '-', e)
 
 
 def post_facebook(p, page, token, test=False):
@@ -118,6 +135,8 @@ def main():
     posted = json.load(open(posted_path, encoding='utf-8'))
     now = dt.datetime.now(LONDON)
     failed = 0
+    if '--schedule-facebook' in sys.argv:
+        schedule_facebook(schedule, posted, env, now)
     for p in due(schedule, posted, now):
         try:
             posted[p['id']] = {'posted_at': now.isoformat(timespec='minutes'), 'result': send(p, env)}
