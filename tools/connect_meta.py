@@ -1,14 +1,16 @@
 """One-time Meta connector for the Red Brick Social Poster app. Run it by double-clicking CONNECT META.bat.
 
-It asks for two things, both typed hidden: the token from Graph API Explorer and the app secret. It turns them into a
+It reads two things straight from the clipboard (pasting into a hidden prompt fails in the Windows console): the token
+from Graph API Explorer and the app secret. Each is format-checked before anything is sent to Meta. It turns them into a
 never-expiring Page token, finds the Instagram account linked to the Page, and saves everything straight into the
 GitHub repository's secrets with the gh tool. Tokens are never printed and never written to disk.
 A plain summary with no tokens goes to connect_result.txt so Claude can read what happened.
 """
-import getpass
 import json
 import os
+import re
 import subprocess
+import tkinter
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -53,14 +55,31 @@ def gh(kind, name, value):
     say('Saved %s %s to GitHub' % (kind, name))
 
 
+def from_clipboard(what, pattern, hint):
+    while True:
+        input('   Copy it, then press Enter here (no need to paste): ')
+        tk = tkinter.Tk()
+        tk.withdraw()
+        try:
+            value = tk.clipboard_get().strip()
+        except tkinter.TclError:
+            value = ''
+        tk.destroy()
+        if re.fullmatch(pattern, value):
+            print('   Got the %s (%d characters). Not shown.' % (what, len(value)))
+            return value
+        print('   That is not the %s: the clipboard holds %d characters. %s Try again.' % (what, len(value), hint))
+
+
 print('RED BRICK - connect Facebook and Instagram to the posting app\n')
 print('1. In Graph API Explorer: app "Red Brick Social Poster", these permissions ticked:')
 print('   ' + ', '.join(sorted(NEEDED)))
 print('   Click Generate Access Token, allow the Red Brick Lettings Page AND the Instagram account,')
 print('   then click the copy icon next to the token.')
-user_token = getpass.getpass('   Paste it here (it stays hidden) and press Enter: ').strip()
-print('\n2. developers.facebook.com > Red Brick Social Poster > App settings > Basic > App secret > Show, copy it.')
-secret = getpass.getpass('   Paste it here (hidden) and press Enter: ').strip()
+user_token = from_clipboard('token', r'EAA[A-Za-z0-9]{50,}', 'A token starts with EAA and is about 200 characters.')
+print('\n2. developers.facebook.com > Red Brick Social Poster > App settings > Basic > App secret > Show.')
+print('   Select the whole secret and copy it (Ctrl+C).')
+secret = from_clipboard('app secret', r'[0-9a-f]{32}', 'The app secret is exactly 32 characters, 0-9 and a-f.')
 say('')
 
 long_token = get('oauth/access_token', grant_type='fb_exchange_token', client_id=APP_ID,
