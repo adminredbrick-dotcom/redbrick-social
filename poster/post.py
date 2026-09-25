@@ -52,9 +52,34 @@ def due(schedule, posted, now):
     return [p for p in schedule if p['id'] not in posted and when(p) <= now < when(p) + LATE]
 
 
+def stamp(v):
+    try:
+        return int(v)
+    except (TypeError, ValueError):
+        return int(dt.datetime.fromisoformat(str(v).replace('+0000', '+00:00')).timestamp())
+
+
 def schedule_facebook(schedule, posted, env, now):
+    tok = env['FB_PAGE_TOKEN']
     for p in schedule:
-        if p['network'] != 'facebook' or p['id'] in posted or when(p) < now + dt.timedelta(minutes=20):
+        if p['network'] != 'facebook':
+            continue
+        old = posted.get(p['id'], {}).get('result', '')
+        if old.startswith('fb-scheduled:'):                  # already with Facebook: move it only if the date changed
+            post_id = old.split(':', 1)[1]
+            try:
+                info = call('GET', post_id, fields='is_published,scheduled_publish_time', access_token=tok)
+                if info.get('is_published') or stamp(info.get('scheduled_publish_time')) == int(when(p).timestamp()):
+                    continue
+                call('DELETE', post_id, access_token=tok)
+            except Exception as e:                           # leave it alone rather than risk posting twice
+                print('could not move', p['id'], '- left in its old slot -', e)
+                continue
+            del posted[p['id']]
+            print('removed old slot', p['id'])
+        elif p['id'] in posted:
+            continue
+        if when(p) < now + dt.timedelta(minutes=20):
             continue
         try:
             r = call('POST', env['FB_PAGE_ID'] + '/photos', url=RAW + p['image'], caption=p['caption'], published='false',
@@ -108,6 +133,8 @@ def selftest():
     assert [p['id'] for p in due(s, {'done': {}}, now)] == ['due']
     summer = dt.datetime(2026, 7, 1, 11, 0, tzinfo=dt.timezone.utc)          # 12:00 London in BST
     assert [p['id'] for p in due([{'id': 'bst', 'at': '2026-07-01 12:00'}], {}, summer)] == ['bst']
+    assert stamp(1790852400) == stamp('1790852400') == stamp('2026-10-01T11:00:00+0000') == 1790852400
+    assert int(when({'at': '2026-10-01 12:00'}).timestamp()) == 1790852400        # 12:00 London in BST
     print('selftest ok')
 
 
