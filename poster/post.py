@@ -61,17 +61,21 @@ def stamp(v):
 
 def schedule_facebook(schedule, posted, env, now):
     tok = env['FB_PAGE_TOKEN']
+    # only posts still waiting in Facebook's scheduler can be moved; anything published is never touched
+    # keyed on the object number: Facebook lists "<page>_<number>", we stored the bare number
+    waiting = {x['id'].split('_')[-1]: (x['id'], stamp(x.get('scheduled_publish_time'))) for x in call(
+        'GET', env['FB_PAGE_ID'] + '/scheduled_posts', fields='id,scheduled_publish_time', limit='100',
+        access_token=tok).get('data', [])}
     for p in schedule:
         if p['network'] != 'facebook':
             continue
         old = posted.get(p['id'], {}).get('result', '')
         if old.startswith('fb-scheduled:'):                  # already with Facebook: move it only if the date changed
-            post_id = old.split(':', 1)[1]
+            num = old.split(':', 1)[1].split('_')[-1]
+            if num not in waiting or waiting[num][1] == int(when(p).timestamp()):
+                continue
             try:
-                info = call('GET', post_id, fields='is_published,scheduled_publish_time', access_token=tok)
-                if info.get('is_published') or stamp(info.get('scheduled_publish_time')) == int(when(p).timestamp()):
-                    continue
-                call('DELETE', post_id, access_token=tok)
+                call('DELETE', waiting[num][0], access_token=tok)
             except Exception as e:                           # leave it alone rather than risk posting twice
                 print('could not move', p['id'], '- left in its old slot -', e)
                 continue
