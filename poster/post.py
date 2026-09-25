@@ -128,6 +128,14 @@ def main():
             except Exception as e:
                 bad += 1
                 print('%s: FAILED - %s' % (c['network'], e))
+        try:                                  # what Facebook itself is holding in its scheduler
+            sp = call('GET', env['FB_PAGE_ID'] + '/scheduled_posts', fields='id,scheduled_publish_time,message,is_published',
+                      limit='100', access_token=env['FB_PAGE_TOKEN']).get('data', [])
+            print('Facebook scheduler holds %d post(s):' % len(sp))
+            for x in sp:
+                print('  ', x.get('scheduled_publish_time'), x['id'], (x.get('message') or '').split('\n')[0][:60])
+        except Exception as e:
+            print('Facebook scheduler: could not list - %s' % e)
         sys.exit(1 if bad else 0)
 
     schedule = json.load(open(os.path.join(ROOT, 'schedule.json'), encoding='utf-8'))
