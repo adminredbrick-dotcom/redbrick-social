@@ -170,7 +170,7 @@ def main():
             print('Facebook scheduler: could not list - %s' % e)
         if '--recent' in sys.argv:            # read-only: what is already published, to reuse or pin
             for x in call('GET', env['FB_PAGE_ID'] + '/published_posts', limit='25', access_token=env['FB_PAGE_TOKEN'],
-                          fields='id,created_time,message,permalink_url,full_picture,is_pinned').get('data', []):
+                          fields='id,created_time,message,permalink_url,full_picture').get('data', []):
                 print('FBPOST', json.dumps(x, ensure_ascii=False))
             if env.get('IG_USER_ID'):
                 for x in call('GET', env['IG_USER_ID'] + '/media', limit='25',
