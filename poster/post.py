@@ -168,6 +168,15 @@ def main():
                 print('  ', x.get('scheduled_publish_time'), x['id'], (x.get('message') or '').split('\n')[0][:60])
         except Exception as e:
             print('Facebook scheduler: could not list - %s' % e)
+        if '--recent' in sys.argv:            # read-only: what is already published, to reuse or pin
+            for x in call('GET', env['FB_PAGE_ID'] + '/published_posts', limit='25', access_token=env['FB_PAGE_TOKEN'],
+                          fields='id,created_time,message,permalink_url,full_picture,is_pinned').get('data', []):
+                print('FBPOST', json.dumps(x, ensure_ascii=False))
+            if env.get('IG_USER_ID'):
+                for x in call('GET', env['IG_USER_ID'] + '/media', limit='25',
+                              access_token=env.get('IG_PAGE_TOKEN') or env['FB_PAGE_TOKEN'],
+                              fields='id,timestamp,caption,permalink,media_type,media_url').get('data', []):
+                    print('IGPOST', json.dumps(x, ensure_ascii=False))
         sys.exit(1 if bad else 0)
 
     schedule = json.load(open(os.path.join(ROOT, 'schedule.json'), encoding='utf-8'))
