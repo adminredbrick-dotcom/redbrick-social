@@ -17,6 +17,7 @@ posted.json    {"<id>": {"posted_at": "...", "result": "<post id>"}}  written ba
 import datetime as dt
 import json
 import os
+import re
 import sys
 import time
 import urllib.error
@@ -147,6 +148,11 @@ def main():
     if '--selftest' in sys.argv:
         return selftest()
     env = os.environ
+    if env.get('PIN'):                        # workflow input "pin": pin one published post to the top of the Page
+        if not re.fullmatch(r'\d+_\d+', env['PIN']):
+            sys.exit('pin needs a Page post id like 100373344900481_1657171059743714')
+        print('pinned', env['PIN'], call('POST', env['PIN'], is_pinned='true', access_token=env['FB_PAGE_TOKEN']))
+        return
     if '--test' in sys.argv:
         checks = [{'network': 'facebook', 'image': 'test/V01_feed.png', 'caption': 'Connection test - not published'}]
         if env.get('IG_USER_ID'):
