@@ -17,10 +17,6 @@ on:
         description: 'Hand future Facebook posts to Facebook''s own scheduler'
         type: boolean
         default: false
-      pin:
-        description: 'Pin this Facebook post id to the top of the Page (does only that, posts nothing)'
-        type: string
-        default: ''
 
 permissions:
   contents: write
@@ -38,7 +34,6 @@ jobs:
           IG_PAGE_TOKEN: ${{ secrets.IG_PAGE_TOKEN }}
           FB_PAGE_ID: ${{ vars.FB_PAGE_ID }}
           IG_USER_ID: ${{ vars.IG_USER_ID }}
-          PIN: ${{ inputs.pin }}
         run: python poster/post.py ${{ inputs.test && '--test' || '' }} ${{ inputs.schedule_facebook && '--schedule-facebook' || '' }} ${{ inputs.recent && '--recent' || '' }}
       - name: Save the posted log
         if: ${{ !cancelled() && !inputs.test }}
