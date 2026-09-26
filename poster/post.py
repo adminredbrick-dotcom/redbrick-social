@@ -28,8 +28,9 @@ G = 'https://graph.facebook.com/v26.0/'
 RAW = 'https://raw.githubusercontent.com/adminredbrick-dotcom/redbrick-social/main/'
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 LONDON = ZoneInfo('Europe/London')
-# ponytail: a post more than 6 hours late is skipped rather than flooded out after an outage; widen if runs stall longer
-LATE = dt.timedelta(hours=6)
+# ponytail: a post more than 12 hours late is skipped rather than flooded out after an outage. GitHub runs the
+# 30-minute timer only every 3-5 hours on this repo (seen 25-26/09/2026), so 12h covers that with room to spare.
+LATE = dt.timedelta(hours=12)
 
 
 def call(method, path, **params):
@@ -133,7 +134,7 @@ def send(p, env, test=False):
 def selftest():
     now = dt.datetime(2026, 10, 1, 12, 10, tzinfo=LONDON)
     s = [{'id': 'due', 'at': '2026-10-01 12:00'}, {'id': 'future', 'at': '2026-10-01 13:00'},
-         {'id': 'too-late', 'at': '2026-10-01 05:00'}, {'id': 'done', 'at': '2026-10-01 11:00'}]
+         {'id': 'too-late', 'at': '2026-09-30 23:00'}, {'id': 'done', 'at': '2026-10-01 11:00'}]
     assert [p['id'] for p in due(s, {'done': {}}, now)] == ['due']
     summer = dt.datetime(2026, 7, 1, 11, 0, tzinfo=dt.timezone.utc)          # 12:00 London in BST
     assert [p['id'] for p in due([{'id': 'bst', 'at': '2026-07-01 12:00'}], {}, summer)] == ['bst']
@@ -174,8 +175,12 @@ def main():
     posted = json.load(open(posted_path, encoding='utf-8'))
     now = dt.datetime.now(LONDON)
     failed = 0
-    if '--schedule-facebook' in sys.argv:
+    # every run hands Facebook posts that are now inside its 30-day window to Facebook's own scheduler, so Facebook
+    # never waits on this timer; a failure here must not stop the posting below
+    try:
         schedule_facebook(schedule, posted, env, now)
+    except Exception as e:
+        print('Facebook scheduling check failed -', e)
     for p in due(schedule, posted, now):
         try:
             posted[p['id']] = {'posted_at': now.isoformat(timespec='minutes'), 'result': send(p, env)}
