@@ -1,3 +1,4 @@
 _push_test.sh
 connect_result.txt
+connect_threads_result.txt
 __pycache__/

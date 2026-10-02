@@ -21,24 +21,33 @@ on:
 permissions:
   contents: write
 
-concurrency: post
+# live runs queue behind each other so nothing posts twice; test runs never wait behind a live one
+concurrency: post-${{ inputs.test && 'test' || 'live' }}
 
 jobs:
   post:
     runs-on: ubuntu-latest
+    timeout-minutes: 350
     steps:
       - uses: actions/checkout@v4
-      - name: Post what is due
+      - name: Post what is due, then wait for anything due in the next 5 hours
+        timeout-minutes: 330
         env:
           FB_PAGE_TOKEN: ${{ secrets.FB_PAGE_TOKEN }}
           IG_PAGE_TOKEN: ${{ secrets.IG_PAGE_TOKEN }}
+          THREADS_TOKEN: ${{ secrets.THREADS_TOKEN }}
           FB_PAGE_ID: ${{ vars.FB_PAGE_ID }}
           IG_USER_ID: ${{ vars.IG_USER_ID }}
-        run: python poster/post.py ${{ inputs.test && '--test' || '' }} ${{ inputs.schedule_facebook && '--schedule-facebook' || '' }} ${{ inputs.recent && '--recent' || '' }}
+          THREADS_USER_ID: ${{ vars.THREADS_USER_ID }}
+        run: python poster/post.py ${{ github.event_name == 'schedule' && '--wait' || '' }} ${{ inputs.test && '--test' || '' }} ${{ inputs.schedule_facebook && '--schedule-facebook' || '' }} ${{ inputs.recent && '--recent' || '' }}
       - name: Save the posted log
-        if: ${{ !cancelled() && !inputs.test }}
+        # always: even if the step above failed or ran out of time, what did go out must be recorded
+        if: ${{ always() && !inputs.test }}
         run: |
           git config user.name "Red Brick poster"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add posted.json
-          git diff --cached --quiet || (git commit -m "Posted log" && git push)
+          git diff --cached --quiet && exit 0
+          git commit -m "Posted log"
+          git pull --rebase origin main
+          git push

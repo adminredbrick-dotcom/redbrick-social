@@ -1,0 +1,25 @@
+name: refresh-threads
+
+# The Threads token lasts 60 days and must be renewed before then. Every Monday this renews it and stores the new
+# one in the repository secrets. Storing a secret needs a GitHub token with "Secrets: read and write" on this
+# repository, saved as the secret SECRETS_PAT (CONNECT THREADS.bat sets it up).
+on:
+  schedule:
+    - cron: '17 4 * * 1'
+  workflow_dispatch:
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Renew the Threads token and save it
+        env:
+          THREADS_TOKEN: ${{ secrets.THREADS_TOKEN }}
+          GH_TOKEN: ${{ secrets.SECRETS_PAT }}
+        run: |
+          if [ -z "$THREADS_TOKEN" ]; then echo "Threads is not connected yet - nothing to renew."; exit 0; fi
+          if [ -z "$GH_TOKEN" ]; then echo "::error::SECRETS_PAT is missing, so the renewed token cannot be saved."; exit 1; fi
+          python poster/post.py --refresh-threads "$RUNNER_TEMP/threads_token"
+          gh secret set THREADS_TOKEN --repo "$GITHUB_REPOSITORY" < "$RUNNER_TEMP/threads_token"
+          rm -f "$RUNNER_TEMP/threads_token"
